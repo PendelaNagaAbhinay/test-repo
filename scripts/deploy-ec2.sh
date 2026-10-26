@@ -66,6 +66,9 @@ APP_TITLE=ShipIt48 - 48h Hackathon Survival Hub
 HACKATHON_NAME=Hack48: Sleep is Optional
 HACKATHON_HOURS=48
 ADMIN_PASSCODE=hackathon-secret-key
+APP_DEPLOYMENT_KEY=production-ec2-secret-2026
+HACKATHON_STATE=RUNNING
+ENABLE_SUBMISSIONS=true
 EOF
 fi
 
