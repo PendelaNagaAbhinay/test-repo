@@ -31,3 +31,31 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* 🚨 Panic Mode (.env HACKATHON_STATE=PANIC_MODE) styles */
+body.panic-mode-active {
+  background-color: #0b0204 !important;
+}
+
+body.panic-mode-active #hero-card {
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  box-shadow: 0 0 35px rgba(239, 68, 68, 0.25) !important;
+}
+
+body.panic-mode-active #ambient-glow {
+  background-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+body.panic-mode-active #mode-pill {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+body.panic-mode-active #state-badge {
+  color: #f87171 !important;
+}
+
+body.panic-mode-active #health-indicator-dot {
+  background-color: #ef4444 !important;
+}

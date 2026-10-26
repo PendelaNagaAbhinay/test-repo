@@ -22,7 +22,7 @@ describe('Static Frontend Delivery', () => {
     }
   });
 
-  test('GET / returns HTML page with app root and scripts', async () => {
+  test('GET / returns HTML page with app root, meme container, and scripts', async () => {
     const res = await fetch(`${baseUrl}/`);
     assert.strictEqual(res.status, 200);
     const text = await res.text();
@@ -30,6 +30,8 @@ describe('Static Frontend Delivery', () => {
     assert.ok(text.includes('countdown-timer'), 'Page contains countdown element');
     assert.ok(text.includes('survival-counters'), 'Page contains survival counters container');
     assert.ok(text.includes('projects-grid'), 'Page contains projects grid');
+    assert.ok(text.includes('meme-card'), 'Page contains meme card container');
+    assert.ok(text.includes('config-alert-banner'), 'Page contains config alert banner');
     assert.ok(text.includes('/app.js'), 'Page loads app.js');
   });
 

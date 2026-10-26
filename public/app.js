@@ -11,31 +11,51 @@ const PHASES = [
   { minHour: 48, maxHour: 999, text: 'Phase 7: Code Freeze — Ship it and pretend that bug was intentional.' }
 ];
 
-// Helper: refresh Lucide icons
 function refreshIcons() {
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
   }
 }
 
-// Fetch System Health (AWS Region & Uptime)
+function isValidHttpUrl(str) {
+  if (!str) return false;
+  return /^https?:\/\//i.test(str.trim());
+}
+
+// Fetch System Health (AWS Region & EC2 Status)
 async function fetchHealth() {
   try {
     const res = await fetch('/health');
-    if (!res.ok) return;
     const data = await res.json();
 
     const regionEl = document.getElementById('aws-region-label');
-    const uptimeEl = document.getElementById('uptime-label');
+    const dotEl = document.getElementById('health-indicator-dot');
+    const alertBanner = document.getElementById('config-alert-banner');
+    const alertText = document.getElementById('config-alert-text');
 
     if (regionEl && data.region) regionEl.textContent = data.region;
-    if (uptimeEl && typeof data.uptime === 'number') uptimeEl.textContent = data.uptime;
+
+    if (!res.ok || data.status === 'error') {
+      if (dotEl) {
+        dotEl.classList.remove('bg-emerald-400');
+        dotEl.classList.add('bg-rose-500');
+      }
+      if (alertBanner) {
+        alertBanner.classList.remove('hidden');
+        if (alertText) alertText.textContent = data.error || 'APP_DEPLOYMENT_KEY invalid in EC2 .env!';
+      }
+    } else {
+      if (dotEl) {
+        dotEl.classList.remove('bg-rose-500');
+        dotEl.classList.add('bg-emerald-400');
+      }
+    }
   } catch (err) {
     console.warn('Health check fetch failed:', err.message);
   }
 }
 
-// Fetch Hackathon Information & Milestones
+// Fetch Hackathon Information, Milestones & Meme State
 async function fetchInfo() {
   try {
     const res = await fetch('/api/info');
@@ -51,6 +71,59 @@ async function fetchInfo() {
       hackathonTotalHours = data.durationHours;
     }
 
+    // Apply State Controls (.env HACKATHON_STATE)
+    const stateBadge = document.getElementById('state-badge');
+    const panicWarningTag = document.getElementById('panic-warning-tag');
+    const appBody = document.getElementById('app-body');
+
+    if (stateBadge && data.hackathonState) {
+      stateBadge.textContent = data.hackathonState;
+    }
+
+    if (data.hackathonState === 'PANIC_MODE') {
+      if (appBody) appBody.classList.add('panic-mode-active');
+      if (panicWarningTag) panicWarningTag.classList.remove('hidden');
+    } else {
+      if (appBody) appBody.classList.remove('panic-mode-active');
+      if (panicWarningTag) panicWarningTag.classList.add('hidden');
+    }
+
+    // Apply Submission Gate (.env ENABLE_SUBMISSIONS)
+    const openSubmitBtn = document.getElementById('open-submit-modal-btn');
+    const submitBtnLabel = document.getElementById('submit-btn-label');
+    const modalDisabledWarning = document.getElementById('modal-disabled-warning');
+    const submitBtn = document.getElementById('submit-btn');
+
+    if (data.enableSubmissions === false) {
+      if (openSubmitBtn) {
+        openSubmitBtn.disabled = true;
+        if (submitBtnLabel) submitBtnLabel.textContent = '🔒 Submissions Locked (.env)';
+      }
+      if (modalDisabledWarning) modalDisabledWarning.classList.remove('hidden');
+      if (submitBtn) submitBtn.disabled = true;
+    } else {
+      if (openSubmitBtn) {
+        openSubmitBtn.disabled = false;
+        if (submitBtnLabel) submitBtnLabel.textContent = 'Submit Project';
+      }
+      if (modalDisabledWarning) modalDisabledWarning.classList.add('hidden');
+      if (submitBtn) submitBtn.disabled = false;
+    }
+
+    // Render Dynamic Hackathon Meme
+    if (data.meme) {
+      const memeImg = document.getElementById('meme-img');
+      const memeTitle = document.getElementById('meme-title');
+      const memeCaption = document.getElementById('meme-caption');
+      const memeBadge = document.getElementById('meme-badge');
+
+      if (memeImg && data.meme.url) memeImg.src = data.meme.url;
+      if (memeTitle && data.meme.title) memeTitle.textContent = data.meme.title;
+      if (memeCaption && data.meme.caption) memeCaption.textContent = `"${data.meme.caption}"`;
+      if (memeBadge) memeBadge.textContent = `STATE: ${data.hackathonState || 'RUNNING'}`;
+    }
+
+    // Render Milestones
     const container = document.getElementById('milestones-container');
     if (container && Array.isArray(data.milestones)) {
       container.innerHTML = data.milestones.map((m) => `
@@ -138,11 +211,6 @@ async function incrementMetric(metric) {
   }
 }
 
-function isValidHttpUrl(str) {
-  if (!str) return false;
-  return /^https?:\/\//i.test(str.trim());
-}
-
 // Fetch and Render Projects
 async function fetchProjects() {
   try {
@@ -199,7 +267,6 @@ async function fetchProjects() {
   }
 }
 
-// Escape HTML for XSS prevention
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -298,7 +365,6 @@ function setupModal() {
   }
 }
 
-// Initialization on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
   fetchHealth();
   fetchInfo();
@@ -308,7 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupModal();
   refreshIcons();
 
-  // Periodic polling for health, stats, and projects
   setInterval(fetchHealth, 15000);
   setInterval(fetchStats, 10000);
   setInterval(fetchProjects, 20000);

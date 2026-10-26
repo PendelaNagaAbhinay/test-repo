@@ -26,7 +26,21 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-black">
+<body id="app-body" class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-black transition-colors duration-500">
+
+  <!-- Critical Configuration Error Banner (Shown when APP_DEPLOYMENT_KEY or ENV is broken) -->
+  <div id="config-alert-banner" class="hidden bg-rose-600/90 border-b border-rose-500 text-white px-4 py-3 shadow-lg z-50">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl animate-bounce">🚨</span>
+        <div>
+          <h4 class="text-xs font-black uppercase tracking-widest text-rose-200">Critical AWS EC2 Configuration Alert</h4>
+          <p id="config-alert-text" class="text-sm font-mono font-bold">Unconfigured environment variable detected!</p>
+        </div>
+      </div>
+      <span class="hidden sm:inline-block px-3 py-1 bg-black/30 rounded text-xs font-mono font-bold">Fix in EC2 .env</span>
+    </div>
+  </div>
 
   <!-- Navigation -->
   <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
@@ -44,16 +58,16 @@
       <!-- Live AWS & System Health Badge -->
       <div class="flex items-center space-x-3">
         <div id="aws-badge" class="hidden sm:flex items-center space-x-2 bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-full text-xs">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="health-indicator-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="text-slate-400">AWS EC2:</span>
           <span id="aws-region-label" class="font-mono text-amber-300">us-east-1</span>
           <span class="text-slate-600">|</span>
-          <span class="text-slate-300">Uptime: <span id="uptime-label" class="font-mono">--</span>s</span>
+          <span id="state-badge" class="font-mono text-emerald-400 font-bold uppercase">RUNNING</span>
         </div>
 
-        <button id="open-submit-modal-btn" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm transition shadow-lg shadow-orange-500/20 active:scale-95">
+        <button id="open-submit-modal-btn" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm transition shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
           <i data-lucide="plus-circle" class="w-4 h-4"></i>
-          <span>Submit Project</span>
+          <span id="submit-btn-label">Submit Project</span>
         </button>
       </div>
     </div>
@@ -62,40 +76,63 @@
   <!-- Main Container -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
-    <!-- 48-Hour Survival Countdown Hero -->
-    <section class="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 p-6 sm:p-10 shadow-2xl">
-      <div class="absolute -right-16 -top-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div class="relative z-10 text-center space-y-4">
-        <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20">
-          Official Panic Timer
-        </span>
+    <!-- 48-Hour Survival Countdown & Live Meme Hero -->
+    <section id="hero-card" class="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 p-6 sm:p-10 shadow-2xl transition-all duration-500">
+      <div id="ambient-glow" class="absolute -right-16 -top-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none transition-all duration-500"></div>
 
-        <h2 id="hackathon-title" class="text-3xl sm:text-4xl font-extrabold tracking-tight">
-          Hack48: Sleep is Optional
-        </h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center relative z-10">
+        <!-- Countdown Section (2 Cols) -->
+        <div class="lg:col-span-2 text-center lg:text-left space-y-4">
+          <div class="flex items-center justify-center lg:justify-start gap-2">
+            <span id="mode-pill" class="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              Official Panic Timer
+            </span>
+            <span id="panic-warning-tag" class="hidden px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-rose-600 text-white animate-pulse">
+              🚨 RED ALERT ACTIVE (.env)
+            </span>
+          </div>
 
-        <!-- Countdown Display -->
-        <div id="countdown-timer" class="flex justify-center items-center gap-2 sm:gap-4 font-mono text-3xl sm:text-6xl font-black text-slate-100 py-3">
-          <div class="bg-slate-800/80 border border-slate-700/80 px-4 py-3 rounded-xl shadow-inner">
-            <span id="cd-hours">47</span>
-            <span class="block text-[10px] sm:text-xs font-sans text-slate-400 tracking-wider uppercase mt-1">Hours</span>
+          <h2 id="hackathon-title" class="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Hack48: Sleep is Optional
+          </h2>
+
+          <!-- Countdown Display -->
+          <div id="countdown-timer" class="flex justify-center lg:justify-start items-center gap-2 sm:gap-4 font-mono text-3xl sm:text-6xl font-black text-slate-100 py-2">
+            <div class="bg-slate-800/80 border border-slate-700/80 px-4 py-3 rounded-xl shadow-inner text-center">
+              <span id="cd-hours">47</span>
+              <span class="block text-[10px] sm:text-xs font-sans text-slate-400 tracking-wider uppercase mt-1">Hours</span>
+            </div>
+            <span class="text-amber-500 animate-pulse">:</span>
+            <div class="bg-slate-800/80 border border-slate-700/80 px-4 py-3 rounded-xl shadow-inner text-center">
+              <span id="cd-minutes">59</span>
+              <span class="block text-[10px] sm:text-xs font-sans text-slate-400 tracking-wider uppercase mt-1">Mins</span>
+            </div>
+            <span class="text-amber-500 animate-pulse">:</span>
+            <div class="bg-slate-800/80 border border-slate-700/80 px-4 py-3 rounded-xl shadow-inner text-center">
+              <span id="cd-seconds">59</span>
+              <span class="block text-[10px] sm:text-xs font-sans text-slate-400 tracking-wider uppercase mt-1">Secs</span>
+            </div>
           </div>
-          <span class="text-amber-500 animate-pulse">:</span>
-          <div class="bg-slate-800/80 border border-slate-700/80 px-4 py-3 rounded-xl shadow-inner">
-            <span id="cd-minutes">59</span>
-            <span class="block text-[10px] sm:text-xs font-sans text-slate-400 tracking-wider uppercase mt-1">Mins</span>
-          </div>
-          <span class="text-amber-500 animate-pulse">:</span>
-          <div class="bg-slate-800/80 border border-slate-700/80 px-4 py-3 rounded-xl shadow-inner">
-            <span id="cd-seconds">59</span>
-            <span class="block text-[10px] sm:text-xs font-sans text-slate-400 tracking-wider uppercase mt-1">Secs</span>
+
+          <!-- Dynamic Satirical Status Banner -->
+          <div class="inline-flex items-center space-x-2 bg-slate-800/60 border border-slate-700 px-4 py-2 rounded-xl text-sm text-slate-300 max-w-xl">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0"></i>
+            <span id="current-phase-text" class="italic">Current Phase: Mass deletion of unit tests that don't pass.</span>
           </div>
         </div>
 
-        <!-- Dynamic Satirical Status Banner -->
-        <div class="inline-flex items-center space-x-2 bg-slate-800/60 border border-slate-700 px-4 py-2 rounded-xl text-sm text-slate-300 max-w-xl">
-          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0"></i>
-          <span id="current-phase-text" class="italic">Current Phase: Mass deletion of unit tests that don't pass.</span>
+        <!-- Live Hackathon Meme Card (1 Col) -->
+        <div id="meme-card" class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col items-center text-center space-y-3 relative group overflow-hidden">
+          <div class="w-full h-44 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 relative flex items-center justify-center">
+            <img id="meme-img" src="https://media.giphy.com/media/unQ3IJU2RG7DO/giphy.gif" alt="Hackathon Meme" class="w-full h-full object-cover">
+            <span id="meme-badge" class="absolute top-2 right-2 bg-black/70 backdrop-blur border border-white/10 text-[10px] font-mono font-bold px-2 py-0.5 rounded text-amber-300">
+              STATE: RUNNING
+            </span>
+          </div>
+          <div>
+            <h4 id="meme-title" class="text-sm font-bold text-slate-200">⚡ SPEEDCODING FLOW STATE</h4>
+            <p id="meme-caption" class="text-xs text-slate-400 italic mt-0.5">"Turning espresso into questionable pull requests."</p>
+          </div>
         </div>
       </div>
     </section>
@@ -207,6 +244,10 @@
         </button>
       </div>
 
+      <div id="modal-disabled-warning" class="hidden text-xs bg-rose-500/10 text-rose-300 border border-rose-500/30 p-3 rounded-lg">
+        🔒 Submissions are currently disabled via <code>ENABLE_SUBMISSIONS=false</code> in the server <code>.env</code> file.
+      </div>
+
       <form id="project-form" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Project Name *</label>
@@ -251,7 +292,7 @@
           <button type="button" id="cancel-modal-btn" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200">
             Cancel
           </button>
-          <button type="submit" id="submit-btn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs shadow transition active:scale-95">
+          <button type="submit" id="submit-btn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs shadow transition active:scale-95 disabled:opacity-50">
             Ship Project 🚀
           </button>
         </div>
