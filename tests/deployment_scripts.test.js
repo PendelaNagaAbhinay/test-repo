@@ -16,6 +16,8 @@ describe('Deployment Scripts and Config', () => {
     assert.ok(content.includes('shipit48.service'), 'Should configure systemd service');
     assert.ok(content.includes('systemctl enable'), 'Should enable systemd service');
     assert.ok(content.includes('systemctl start'), 'Should start systemd service');
+    assert.ok(!content.includes('User=root'), 'Should not run service as root');
+    assert.ok(content.includes('command -v node'), 'Should dynamically detect node binary path');
   });
 
   test('ec2-user-data.sh exists and contains bootstrap instructions', () => {

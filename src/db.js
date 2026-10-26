@@ -42,6 +42,12 @@ const INITIAL_STATS = {
   bugsPromotedToFeatures: 23
 };
 
+function sanitizeUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+}
+
 class DB {
   constructor() {
     this.dbPath = DEFAULT_DB_PATH;
@@ -103,7 +109,7 @@ class DB {
       tag: data.tag ? data.tag.trim() : 'Works On My Machine',
       description: data.description ? data.description.trim() : 'No description provided (probably coding).',
       knownBugs: data.knownBugs ? data.knownBugs.trim() : 'None admitted (yet).',
-      demoUrl: data.demoUrl ? data.demoUrl.trim() : '',
+      demoUrl: sanitizeUrl(data.demoUrl),
       createdAt: new Date().toISOString()
     };
 

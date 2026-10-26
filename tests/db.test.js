@@ -55,6 +55,22 @@ describe('Database / Storage Module', () => {
     }, /Title and team name are required/);
   });
 
+  test('sanitizes demoUrl to reject non-http schemes like javascript: protocol', () => {
+    const proj = db.addProject({
+      title: 'XSS Attempt',
+      teamName: 'Hackers',
+      demoUrl: 'javascript:alert("pwned")'
+    });
+    assert.strictEqual(proj.demoUrl, '');
+
+    const validProj = db.addProject({
+      title: 'Valid URL',
+      teamName: 'Good Team',
+      demoUrl: 'https://github.com/shipit48'
+    });
+    assert.strictEqual(validProj.demoUrl, 'https://github.com/shipit48');
+  });
+
   test('returns initial survival stats', () => {
     const stats = db.getStats();
     assert.strictEqual(typeof stats.coffeesDrank, 'number');

@@ -69,7 +69,25 @@ ADMIN_PASSCODE=hackathon-secret-key
 EOF
 fi
 
-# 5. Create systemd Service Unit
+# 5. Determine Non-Root Service User and Node Binary
+NODE_BIN="$(command -v node)"
+SERVICE_USER="${SUDO_USER:-ec2-user}"
+if ! id "$SERVICE_USER" >/dev/null 2>&1; then
+  if id "ubuntu" >/dev/null 2>&1; then
+    SERVICE_USER="ubuntu"
+  else
+    SERVICE_USER="nobody"
+  fi
+fi
+
+echo "👤 Service will run as unprivileged user: ${SERVICE_USER}"
+echo "📍 Node binary: ${NODE_BIN}"
+
+# Ensure data directory and env file are owned by service user
+mkdir -p "${APP_DIR}/data"
+chown -R "${SERVICE_USER}" "${APP_DIR}/data" "${APP_DIR}/.env" 2>/dev/null || true
+
+# 6. Create systemd Service Unit
 echo "🔧 Configuring systemd service (shipit48.service)..."
 cat > /etc/systemd/system/shipit48.service <<EOF
 [Unit]
@@ -78,9 +96,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+User=${SERVICE_USER}
 WorkingDirectory=${APP_DIR}
-ExecStart=/usr/bin/node ${APP_DIR}/src/server.js
+ExecStart=${NODE_BIN} ${APP_DIR}/src/server.js
 Restart=always
 RestartSec=5
 EnvironmentFile=${APP_DIR}/.env
@@ -89,20 +107,21 @@ EnvironmentFile=${APP_DIR}/.env
 WantedBy=multi-user.target
 EOF
 
-# 6. Enable and Start Service
+# 7. Enable and Start Service
 echo "🔄 Reloading systemd and starting ShipIt48..."
 systemctl daemon-reload
 systemctl enable shipit48.service
 systemctl start shipit48.service
 systemctl restart shipit48.service
 
-# 7. Optional Port 80 -> 3000 forwarding via iptables
+# 8. Optional Port 80 -> 3000 forwarding via iptables
 if command -v iptables >/dev/null 2>&1; then
   echo "🌐 Setting up Port 80 -> 3000 redirect (allows direct HTTP access)..."
+  iptables -t nat -C PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000 2>/dev/null || \
   iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000 || true
 fi
 
-# 8. Check health
+# 9. Check health
 sleep 2
 echo "🩺 Verifying service health..."
 if curl -s http://127.0.0.1:3000/health | grep -q '"status":"ok"'; then

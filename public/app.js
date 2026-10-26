@@ -138,6 +138,11 @@ async function incrementMetric(metric) {
   }
 }
 
+function isValidHttpUrl(str) {
+  if (!str) return false;
+  return /^https?:\/\//i.test(str.trim());
+}
+
 // Fetch and Render Projects
 async function fetchProjects() {
   try {
@@ -183,7 +188,7 @@ async function fetchProjects() {
 
         <div class="pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-500">
           <span>${formatDate(p.createdAt)}</span>
-          ${p.demoUrl ? `<a href="${escapeHtml(p.demoUrl)}" target="_blank" rel="noopener" class="text-amber-400 hover:text-amber-300 font-medium inline-flex items-center gap-1">Demo &rarr;</a>` : ''}
+          ${isValidHttpUrl(p.demoUrl) ? `<a href="${escapeHtml(p.demoUrl)}" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:text-amber-300 font-medium inline-flex items-center gap-1">Demo &rarr;</a>` : ''}
         </div>
       </div>
     `).join('');
@@ -303,7 +308,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupModal();
   refreshIcons();
 
-  // Periodic polling for health and stats
+  // Periodic polling for health, stats, and projects
   setInterval(fetchHealth, 15000);
   setInterval(fetchStats, 10000);
+  setInterval(fetchProjects, 20000);
 });
