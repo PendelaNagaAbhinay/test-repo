@@ -1,0 +1,24 @@
+{
+  "name": "shipit48",
+  "version": "1.0.0",
+  "description": "ShipIt48 - The 48-Hour Hackathon Survival Dashboard",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "keywords": [
+    "hackathon",
+    "aws",
+    "ec2",
+    "lightweight",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT"
+}
