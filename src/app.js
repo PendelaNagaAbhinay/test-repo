@@ -10,24 +10,71 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.resolve(__dirname, '../public')));
 
+function getMemeForState(state, isConfigValid) {
+  if (!isConfigValid) {
+    return {
+      title: '🚨 CRITICAL DEPLOYMENT MELTDOWN (.env Misconfigured)',
+      url: 'https://media.giphy.com/media/QMHoU66sBXCAU/giphy.gif',
+      caption: 'APP_DEPLOYMENT_KEY is missing or set to placeholder in .env! Deployment fails safety checks.'
+    };
+  }
+  if (state === 'PANIC_MODE') {
+    return {
+      title: '🔥 PANIC MODE: This Is Fine',
+      url: 'https://media.giphy.com/media/9M5jK4GXmD5o1irGrF/giphy.gif',
+      caption: 'Demo in 2 hours, 14 failing tests, and 0 regrets.'
+    };
+  }
+  if (state === 'MAINTENANCE') {
+    return {
+      title: '🛑 MAINTENANCE: Cloud Meltdown',
+      url: 'https://media.giphy.com/media/HhTXt43GL1I8o/giphy.gif',
+      caption: 'The EC2 instance is taking a mandatory meditation break.'
+    };
+  }
+  return {
+    title: '⚡ SPEEDCODING: 48h Hackathon Flow State',
+    url: 'https://media.giphy.com/media/unQ3IJU2RG7DO/giphy.gif',
+    caption: 'Turning high-octane caffeine into questionable full-stack code.'
+  };
+}
+
 // Health check for EC2 / Load Balancer
 app.get('/health', (req, res) => {
+  if (!config.isConfigValid) {
+    return res.status(500).json({
+      status: 'error',
+      error: config.configError,
+      uptime: Math.floor(process.uptime()),
+      env: config.nodeEnv,
+      region: config.awsRegion,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   res.status(200).json({
     status: 'ok',
     uptime: Math.floor(process.uptime()),
     env: config.nodeEnv,
     region: config.awsRegion,
+    hackathonState: config.hackathonState,
+    enableSubmissions: config.enableSubmissions,
     timestamp: new Date().toISOString()
   });
 });
 
-// Event metadata & satirical milestones
+// Event metadata, memes & satirical milestones
 app.get('/api/info', (req, res) => {
   res.status(200).json({
     hackathonName: config.hackathonName,
     durationHours: config.hackathonHours,
     appTitle: config.appTitle,
     region: config.awsRegion,
+    hackathonState: config.hackathonState,
+    enableSubmissions: config.enableSubmissions,
+    isConfigValid: config.isConfigValid,
+    configError: config.configError,
+    meme: getMemeForState(config.hackathonState, config.isConfigValid),
     milestones: [
       { hour: 0, title: 'Kickoff & Delusional Ambition', desc: 'Everyone plans a distributed multi-agent blockchain drone system in 48 hours.' },
       { hour: 12, title: 'Security Group Hell', desc: 'Spending 3 hours realizing AWS inbound port 3000 was never opened.' },
@@ -44,8 +91,14 @@ app.get('/api/projects', (req, res) => {
   res.status(200).json(db.getProjects());
 });
 
-// Submit a new project
+// Submit a new project (Guarded by ENABLE_SUBMISSIONS)
 app.post('/api/projects', (req, res) => {
+  if (!config.enableSubmissions) {
+    return res.status(403).json({
+      error: 'Submissions are currently locked via ENABLE_SUBMISSIONS=false in .env'
+    });
+  }
+
   try {
     const { title, teamName, tag, description, knownBugs, demoUrl } = req.body;
     const project = db.addProject({ title, teamName, tag, description, knownBugs, demoUrl });

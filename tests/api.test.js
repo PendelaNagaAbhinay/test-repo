@@ -43,16 +43,38 @@ describe('Express REST API', () => {
     assert.strictEqual(typeof body.uptime, 'number');
     assert.strictEqual(typeof body.region, 'string');
     assert.strictEqual(typeof body.env, 'string');
+    assert.strictEqual(typeof body.hackathonState, 'string');
   });
 
-  test('GET /api/info returns hackathon details and milestones', async () => {
+  test('GET /api/info returns hackathon details, state, and meme object', async () => {
     const res = await fetch(`${baseUrl}/api/info`);
     assert.strictEqual(res.status, 200);
     const body = await res.json();
     assert.ok(body.hackathonName);
     assert.ok(body.durationHours);
     assert.ok(Array.isArray(body.milestones));
-    assert.ok(body.milestones.length > 0);
+    assert.ok(body.hackathonState);
+    assert.strictEqual(typeof body.enableSubmissions, 'boolean');
+    assert.ok(body.meme && body.meme.url);
+  });
+
+  test('POST /api/projects rejects when enableSubmissions is false', async () => {
+    const config = require('../src/config');
+    const originalEnable = config.enableSubmissions;
+    config.enableSubmissions = false;
+
+    try {
+      const res = await fetch(`${baseUrl}/api/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Disallowed Proj', teamName: 'Late Team' })
+      });
+      assert.strictEqual(res.status, 403);
+      const data = await res.json();
+      assert.ok(data.error.includes('ENABLE_SUBMISSIONS'));
+    } finally {
+      config.enableSubmissions = originalEnable;
+    }
   });
 
   test('GET /api/projects returns list of projects', async () => {
